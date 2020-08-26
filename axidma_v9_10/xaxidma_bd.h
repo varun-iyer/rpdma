@@ -90,7 +90,7 @@
  *			XAxiDma_BdGetActualLength(BdPtr, LengthMask)
  *			XAxiDma_BdGetLength(BdPtr, LengthMask)
  *			XAxiDma_BdSetLength(XAxiDma_Bd* BdPtr,
- *					uint32_t LenBytes, uint32_t LengthMask)
+ *					u32 LenBytes, u32 LengthMask)
  * 7.01a srt  10/26/12  Changed the logic of MCDMA BD fields Set APIs, to
  *			clear the field first and set it.
  * 8.0   srt  01/29/14 Added support for Micro DMA Mode.
@@ -109,8 +109,16 @@ extern "C" {
 
 /***************************** Include Files *********************************/
 
-#include <stdint.h>
+#include "xaxidma_hw.h"
+#include "xstatus.h"
+#include "xdebug.h"
+#include "xil_cache.h"
+
+#ifdef __MICROBLAZE__
+#include "xenv.h"
+#else
 #include <string.h>
+#endif
 
 /************************** Constant Definitions *****************************/
 
@@ -120,7 +128,7 @@ extern "C" {
  * The XAxiDma_Bd is the type for a buffer descriptor (BD).
  */
 
-typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
+typedef u32 XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
 
 
 /***************** Macros (Inline Functions) Definitions *********************/
@@ -129,16 +137,15 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  * Define methods to flush and invalidate cache for BDs should they be
  * located in cached memory.
  *****************************************************************************/
-#define __aarch64__ // FIXME need to implement actual cache flush/invalidates
 #ifdef __aarch64__
 #define XAXIDMA_CACHE_FLUSH(BdPtr)
 #define XAXIDMA_CACHE_INVALIDATE(BdPtr)
 #else
 #define XAXIDMA_CACHE_FLUSH(BdPtr) \
-	Xil_DCacheFlushRange((unsigned int *)(BdPtr), XAXIDMA_BD_HW_NUM_BYTES)
+	Xil_DCacheFlushRange((UINTPTR)(BdPtr), XAXIDMA_BD_HW_NUM_BYTES)
 
 #define XAXIDMA_CACHE_INVALIDATE(BdPtr) \
-	Xil_DCacheInvalidateRange((unsigned int *)(BdPtr), XAXIDMA_BD_HW_NUM_BYTES)
+	Xil_DCacheInvalidateRange((UINTPTR)(BdPtr), XAXIDMA_BD_HW_NUM_BYTES)
 #endif
 
 /*****************************************************************************/
@@ -153,11 +160,11 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
 *
 * @note
 *		C-style signature:
-*		uint32_t XAxiDma_BdRead(uint32_t BaseAddress, uint32_t Offset)
+*		u32 XAxiDma_BdRead(u32 BaseAddress, u32 Offset)
 *
 ******************************************************************************/
 #define XAxiDma_BdRead(BaseAddress, Offset)				\
-	(*(uint32_t *)((unsigned int *)(BaseAddress) + (uint32_t)(Offset)))
+	(*(u32 *)((UINTPTR)(BaseAddress) + (u32)(Offset)))
 
 /*****************************************************************************/
 /**
@@ -172,11 +179,11 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
 *
 * @note
 * 		C-style signature:
-*		void XAxiDma_BdWrite(uint32_t BaseAddress, uint32_t RegOffset, uint32_t Data)
+*		void XAxiDma_BdWrite(u32 BaseAddress, u32 RegOffset, u32 Data)
 *
 ******************************************************************************/
 #define XAxiDma_BdWrite(BaseAddress, Offset, Data)			\
-	(*(uint32_t *)((unsigned int *)(void *)(BaseAddress) + (uint32_t)(Offset))) = (uint32_t)(Data)
+	(*(u32 *)((UINTPTR)(void *)(BaseAddress) + (u32)(Offset))) = (u32)(Data)
 
 /*****************************************************************************/
 /**
@@ -191,11 +198,11 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
 *
 * @note
 * 		C-style signature:
-*		void XAxiDma_BdWrite(unsigned long long int BaseAddress, uint32_t RegOffset, unsigned long long int Data)
+*		void XAxiDma_BdWrite(u64 BaseAddress, u32 RegOffset, u64 Data)
 *
 ******************************************************************************/
 #define XAxiDma_BdWrite64(BaseAddress, Offset, Data)			\
-	(*(unsigned long long int *)((unsigned int *)(void *)(BaseAddress) + (uint32_t)(Offset))) = (unsigned long long int)(Data)
+	(*(u64 *)((UINTPTR)(void *)(BaseAddress) + (u32)(Offset))) = (u64)(Data)
 
 /*****************************************************************************/
 /**
@@ -212,7 +219,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  *****************************************************************************/
 #define XAxiDma_BdClear(BdPtr)                    \
-  memset((void *)(((unsigned int *)(BdPtr)) + XAXIDMA_BD_START_CLEAR), 0, \
+  memset((void *)(((UINTPTR)(BdPtr)) + XAXIDMA_BD_START_CLEAR), 0, \
     XAXIDMA_BD_BYTES_TO_CLEAR)
 
 /*****************************************************************************/
@@ -225,7 +232,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetCtrl(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetCtrl(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetCtrl(BdPtr)				\
@@ -242,7 +249,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetSts(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetSts(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetSts(BdPtr)              \
@@ -263,7 +270,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetLength(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetLength(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetLength(BdPtr, LengthMask)                \
@@ -287,7 +294,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  *****************************************************************************/
 #define XAxiDma_BdSetId(BdPtr, Id)                                      \
-	(XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_ID_OFFSET, (unsigned int *)(Id)))
+	(XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_ID_OFFSET, (UINTPTR)(Id)))
 
 
 /*****************************************************************************/
@@ -300,7 +307,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetId(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetId(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetId(BdPtr) (XAxiDma_BdRead((BdPtr), XAXIDMA_BD_ID_OFFSET))
@@ -315,7 +322,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetBufAddr(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetBufAddr(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetBufAddr(BdPtr)                     \
@@ -384,10 +391,10 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *****************************************************************************/
 #define XAxiDma_BdSetTId(BdPtr, TId) \
 { \
-	uint32_t val; \
+	u32 val; \
 	val = (XAxiDma_BdRead((BdPtr), XAXIDMA_BD_MCCTL_OFFSET) & \
 		~XAXIDMA_BD_TID_FIELD_MASK); \
-	val |= ((uint32_t)(TId) << XAXIDMA_BD_TID_FIELD_SHIFT); \
+	val |= ((u32)(TId) << XAXIDMA_BD_TID_FIELD_SHIFT); \
 	XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_MCCTL_OFFSET, val); \
 }
 
@@ -401,7 +408,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetTId(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetTId(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetTId(BdPtr) \
@@ -425,10 +432,10 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *****************************************************************************/
 #define XAxiDma_BdSetTDest(BdPtr, TDest) \
 { \
-	uint32_t val; \
+	u32 val; \
 	val = (XAxiDma_BdRead((BdPtr), XAXIDMA_BD_MCCTL_OFFSET) & \
 		~XAXIDMA_BD_TDEST_FIELD_MASK); \
-	val |= ((uint32_t)(TDest) << XAXIDMA_BD_TDEST_FIELD_SHIFT); \
+	val |= ((u32)(TDest) << XAXIDMA_BD_TDEST_FIELD_SHIFT); \
 	XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_MCCTL_OFFSET, val); \
 }
 
@@ -443,7 +450,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetTDest(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetTDest(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetTDest(BdPtr) \
@@ -467,10 +474,10 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *****************************************************************************/
 #define XAxiDma_BdSetTUser(BdPtr, TUser)	\
 { \
-	uint32_t val; \
+	u32 val; \
 	val = (XAxiDma_BdRead((BdPtr), XAXIDMA_BD_MCCTL_OFFSET) & \
 		~XAXIDMA_BD_TUSER_FIELD_MASK); \
-	val |= ((uint32_t)(TUser) << XAXIDMA_BD_TUSER_FIELD_SHIFT); \
+	val |= ((u32)(TUser) << XAXIDMA_BD_TUSER_FIELD_SHIFT); \
 	XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_MCCTL_OFFSET, val); \
 }
 
@@ -485,7 +492,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetTUser(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetTUser(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetTUser(BdPtr) \
@@ -510,10 +517,10 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *****************************************************************************/
 #define XAxiDma_BdSetARCache(BdPtr, ARCache) \
 { \
-	uint32_t val; \
+	u32 val; \
 	val = (XAxiDma_BdRead((BdPtr), XAXIDMA_BD_MCCTL_OFFSET) & \
 		~XAXIDMA_BD_ARCACHE_FIELD_MASK); \
-	val |= ((uint32_t)(ARCache) << XAXIDMA_BD_ARCACHE_FIELD_SHIFT); \
+	val |= ((u32)(ARCache) << XAXIDMA_BD_ARCACHE_FIELD_SHIFT); \
 	XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_MCCTL_OFFSET, val); \
 }
 
@@ -528,7 +535,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetARCache(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetARCache(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetARCache(BdPtr) \
@@ -553,10 +560,10 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *****************************************************************************/
 #define XAxiDma_BdSetARUser(BdPtr, ARUser) \
 { \
-	uint32_t val; \
+	u32 val; \
 	val = (XAxiDma_BdRead((BdPtr), XAXIDMA_BD_MCCTL_OFFSET) & \
 		~XAXIDMA_BD_ARUSER_FIELD_MASK); \
-	val |= ((uint32_t)(ARUser) << XAXIDMA_BD_ARUSER_FIELD_SHIFT); \
+	val |= ((u32)(ARUser) << XAXIDMA_BD_ARUSER_FIELD_SHIFT); \
 	XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_MCCTL_OFFSET, val); \
 }
 
@@ -572,7 +579,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetARUser(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetARUser(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetARUser(BdPtr) \
@@ -597,10 +604,10 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *****************************************************************************/
 #define XAxiDma_BdSetStride(BdPtr, Stride) \
 { \
-	uint32_t val; \
+	u32 val; \
 	val = (XAxiDma_BdRead((BdPtr), XAXIDMA_BD_STRIDE_VSIZE_OFFSET) & \
 		~XAXIDMA_BD_STRIDE_FIELD_MASK); \
-	val |= ((uint32_t)(Stride) << XAXIDMA_BD_STRIDE_FIELD_SHIFT); \
+	val |= ((u32)(Stride) << XAXIDMA_BD_STRIDE_FIELD_SHIFT); \
 	XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_STRIDE_VSIZE_OFFSET, val); \
 }
 
@@ -615,7 +622,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetStride(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetStride(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetStride(BdPtr) \
@@ -639,10 +646,10 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *****************************************************************************/
 #define XAxiDma_BdSetVSize(BdPtr, VSize) \
 { \
-	uint32_t val; \
+	u32 val; \
 	val = (XAxiDma_BdRead((BdPtr), XAXIDMA_BD_STRIDE_VSIZE_OFFSET) & \
 		~XAXIDMA_BD_VSIZE_FIELD_MASK); \
-	val |= ((uint32_t)(VSize) << XAXIDMA_BD_VSIZE_FIELD_SHIFT); \
+	val |= ((u32)(VSize) << XAXIDMA_BD_VSIZE_FIELD_SHIFT); \
 	XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_STRIDE_VSIZE_OFFSET, val); \
 }
 
@@ -657,7 +664,7 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  * @note
  *		C-style signature:
- *		uint32_t XAxiDma_BdGetVSize(XAxiDma_Bd* BdPtr)
+ *		u32 XAxiDma_BdGetVSize(XAxiDma_Bd* BdPtr)
  *
  *****************************************************************************/
 #define XAxiDma_BdGetVSize(BdPtr) \
@@ -668,12 +675,12 @@ typedef uint32_t XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
 
 /************************** Function Prototypes ******************************/
 
-int XAxiDma_BdSetLength(XAxiDma_Bd* BdPtr, uint32_t LenBytes, uint32_t LengthMask);
-uint32_t XAxiDma_BdSetBufAddr(XAxiDma_Bd* BdPtr, unsigned int *Addr);
-uint32_t XAxiDma_BdSetBufAddrMicroMode(XAxiDma_Bd* BdPtr, unsigned int *Addr);
-int XAxiDma_BdSetAppWord(XAxiDma_Bd * BdPtr, int Offset, uint32_t Word);
-uint32_t XAxiDma_BdGetAppWord(XAxiDma_Bd * BdPtr, int Offset, int *Valid);
-void XAxiDma_BdSetCtrl(XAxiDma_Bd *BdPtr, uint32_t Data);
+int XAxiDma_BdSetLength(XAxiDma_Bd* BdPtr, u32 LenBytes, u32 LengthMask);
+u32 XAxiDma_BdSetBufAddr(XAxiDma_Bd* BdPtr, UINTPTR Addr);
+u32 XAxiDma_BdSetBufAddrMicroMode(XAxiDma_Bd* BdPtr, UINTPTR Addr);
+int XAxiDma_BdSetAppWord(XAxiDma_Bd * BdPtr, int Offset, u32 Word);
+u32 XAxiDma_BdGetAppWord(XAxiDma_Bd * BdPtr, int Offset, int *Valid);
+void XAxiDma_BdSetCtrl(XAxiDma_Bd *BdPtr, u32 Data);
 
 /* Debug utility
  */
