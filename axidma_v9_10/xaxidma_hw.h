@@ -59,9 +59,6 @@
 extern "C" {
 #endif
 
-#include "xil_types.h"
-#include "xil_io.h"
-
 /************************** Constant Definitions *****************************/
 
 /** @name DMA Transfer Direction
@@ -311,7 +308,7 @@ extern "C" {
 *
 ******************************************************************************/
 #define XAxiDma_ReadReg(BaseAddress, RegOffset)             \
-    XAxiDma_In32((BaseAddress) + (RegOffset))
+    ( *((BaseAddress) + (RegOffset)) )
 
 /*****************************************************************************/
 /**
@@ -330,7 +327,7 @@ extern "C" {
 *
 ******************************************************************************/
 #define XAxiDma_WriteReg(BaseAddress, RegOffset, Data)          \
-    XAxiDma_Out32((BaseAddress) + (RegOffset), (Data))
+	(*(BaseAddress + RegOffset) = Data)
 
 #ifdef __cplusplus
 }
